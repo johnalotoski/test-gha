@@ -21,6 +21,11 @@ jobs:
     name: "Test GHA"
     runs-on: ubuntu-latest
     steps:
+    - name: Install Nix
+      uses: input-output-hk/install-nix-action@v20
+
+    - name: Install Packages
+      run:  nix profile install nixpkgs#gh
 
     - name: Obtaining latest release tag
       id: latest-tag
