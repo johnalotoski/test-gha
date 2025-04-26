@@ -1,0 +1,44 @@
+name: Upload to ghcr.io
+
+on:
+  push:
+    tags:
+      - '**'
+  # GITHUB_SHA: Last commit in the tagged release
+  # GITHUB_REF: Tag ref of release refs/tags/<tag_name>
+  release:
+    types:
+      - published
+  # GITHUB_SHA: Last commit on the GITHUB_REF branch or tag
+  # GITHUB_REF: Branch or tag that received dispatch
+  workflow_dispatch: {}
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  build:
+    name: "Test GHA"
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Obtaining latest release tag
+      id: latest-tag
+      run: |
+        LATEST_TAG=$(gh api repos/$GITHUB_REPOSITORY/releases/latest --paginate --jq '.tag_name')
+        echo "LATEST_TAG=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+        echo "Latest release tag is: $LATEST_TAG"
+
+    - name: Tagging intersectmbo container latest
+      # Github releases are checked for latest tag in the first `or` operand of
+      # the if statement. However, github pre-releases that are promoted to
+      # releases do not trigger a `published` event.  For those a manual
+      # workflow must be run off the matching release tag.  The second `or`
+      # operand checks for that case.
+      if: |
+        (github.event_name == 'release' && github.event.release.tag_name == steps.latest-tag.outputs.LATEST_TAG) ||
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/tags/' + steps.latest-tag.outputs.LATEST_TAG)
+      run: |
+        echo "Event name: ${{ github.event_name }}"
+        echo "Github Ref: $GITHUB_REF"
+        echo "Latest Tag: ${{ steps.latest-tag.outputs.LATEST_TAG }}"
